@@ -24,21 +24,16 @@ const PORT = 3000;
 app.set("view engine", "ejs");
 app.use(express.static(path.join(__dirname, "public")));
 // use helmet
-app.use(helmet());
+app.use( helmet.hidePoweredBy());
+app.use( helmet.contentSecurityPolicy());
+app.use( helmet.hsts( { maxAge: 7776000000 } ) ) ;
+app.use( helmet.frameguard( 'SAMEORIGIN' ) ) ;
+app.use( helmet.xssFilter( { setOnOldIE: true } ) ) ;
+app.use( helmet.noSniff() ) ;
 // use CookieParser
 app.use(cookieparser());
-// Apply rate limiting to all routes
-//app.use(limiter);
-
-// Set up rate limiting using the express-rate-limit middleware
-//const limiter = rateLimit({
-//  windowMs: 15 * 60 * 1000, // 15 minutes
- // max: 100, // limit each IP to 100 requests per windowMs
-  //message: 'Too many requests from this IP, please try again later'
-//});
-
-// Apply rate limiting to all routes
-//app.use(limiter);
+//use CSURF 
+app.use( csurf());
 
 // Setting up CSRF protection
 const csrfMiddleware = csurf({
@@ -60,7 +55,8 @@ app.use((error, request, response, next) => {
 
 app.use(
   session({
-    secret: "secret",
+    secret: "super-duper-unguessable-secret-key",
+    key: "sessionid",
     resave: true,
     saveUninitialized: true,
     cookie: {
@@ -124,7 +120,7 @@ app.get("/home", function (request, response) {
 app.get("/transfer", csrfMiddleware, function (request, response) {
   if (request.session.loggedin) {
     var sent = "";
-    response.render("transfer", { sent, csrfToken: request.csrfToken() });
+    response.render("transfers", { sent, csrfToken: request.csrfToken() });
   } else {
     response.redirect("/");
   }
@@ -156,14 +152,13 @@ app.post("/transfer", csrfMiddleware, function (request, response) {
         );
       } else {
         var sent = "You Don't Have Enough Funds.";
-        response.render("transfer", { sent });
+        response.render("transfers", { sent, csrfToken: request.csrfToken() });
       }
     } else {
-      var sent = "";
-      response.render("transfer", { sent });
+      response.redirect("/transfer");
     }
   } else {
-    response.redirect("/");
+    response.redirect("/transfer");
   }
 });
 
@@ -181,9 +176,7 @@ app.get("/download", function (request, response) {
 app.post("/download", function (request, response) {
   if (request.session.loggedin) {
     var file_name = request.body.file;
-
     // const filePath = "history_files/" + file_name; ----> Vulnerable way to manipulate files in Node Apps
-
     // Safe way to manipulated files in Node Apps
     const rootDirectory = "history_files\\";
     const filePath = path.join(process.cwd() + '/history_files/', file_name);
@@ -192,7 +185,7 @@ app.post("/download", function (request, response) {
 
     response.statusCode = 200;
     response.setHeader("Content-Type", "text/html");
-    console.log(filePath);
+    console.log(fileName);
 
     // Change the filePath to current working directory using the "path" method
   
@@ -251,12 +244,10 @@ app.post("/public_forum", function (request, response) {
         response.render("forum", { rows });
       });
     }
-    comment = "";
   } else {
     response.redirect("/");
   }
   comment = "";
-  //response.end();
 });
 
 //SQL UNION INJECTION FIXED
