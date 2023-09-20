@@ -45,8 +45,19 @@ The project consists of the following main components:
 5. Install project dependencies:
 
     ```npm install```
+   
+## Using Docker
 
-6. Start the server:
+You can use Docker to run this application in a container. Ensure you have Docker installed on your system.
 
-    ```node app.js```
+1. Build a Docker image for the application and run it:
 
+   ```docker build -t acmebanksecured .```
+
+   ```docker run -p 3000:3000 -it acmebanksecured```
+   
+3. To stop the container you should get the Container ID, and execute the following commands:
+
+   ```docker ps -as```
+   ```docker stop <CONTAINER-ID>```
+   
